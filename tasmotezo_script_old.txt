@@ -1,0 +1,135 @@
+>D
+m:m_orp=0
+m:m_ph=0
+m:m_temp=0
+orp=0
+ph=0
+temp=0
+t:t_interval=0
+interval=30
+nxtpmp=2
+t:t_bootup=0
+bootup=10
+t:t_rampup=0
+rampup=18
+sw=0
+ph_tar=7.4
+orp_tar=740
+t:t_inject=0
+inject=12
+t:t_orp_timer=0
+orp_timer=570
+t:t_publish=0
+publish=60
+
+
+>B
+t_bootup=bootup
+; print t_bootup %t_bootup%
+t_publish=publish
+
+
+>T
+; sensor values
+orp=EZO_1#ORP
+ph=EZO_2#pH
+temp=EZO_3#Temperature
+
+
+>F
+
+
+
+>S
+; median
+m_orp=orp
+m_ph=ph
+m_temp=temp
+
+; inject timer
+if t_inject==0
+then t_inject=-1
+=>power2 0
+=>power3 0
+endif
+
+; boot timer ended
+if t_bootup==0
+then t_bootup=-1
+; print t_bootup ended
+endif
+
+; pumpe set rampup
+sw=sw[0]
+if chg[sw]>0 
+and pwr[1]==1
+then t_rampup=rampup
+; print t_rampup %t_rampup%
+endif
+
+; pumpe rampup ended
+if t_rampup==0
+then t_rampup=-1
+; print t_rampup ended
+endif
+
+; t_orp_timer ended
+if t_orp_timer==0
+then t_orp_timer=-1
+endif
+
+; pmp interval
+if t_bootup==-1
+and t_rampup==-1
+and t_interval==0
+and pwr[1]==1
+then t_interval=interval
+if nxtpmp==2
+then 
+nxtpmp=3
+if m_ph>ph_tar
+then
+t_inject=inject
+=>power2 1
+endif
+else 
+nxtpmp=2
+if m_orp<orp_tar
+and t_orp_timer==-1
+then
+t_inject=inject
+t_orp_timer=orp_timer
+=>power3 1
+endif
+endif
+; print nxtpmp %nxtpmp%
+; print t_interval %t_interval%
+endif
+
+; print level of gpio16 d0 %pin[16]%
+; print level of gpio16 rx %pin[3]%
+
+; print ORP %orp%
+; print m_orp %m_orp%
+; print m_ph %m_ph%
+; print m_temp %m_temp%
+
+if t_publish==0
+then 
+t_publish=publish
+if m_orp>300 
+and m_orp<2000
+then 
+=>Publish tele/%topic%/ORP {"ORP":%m_orp%}
+endif
+if m_ph>5
+and m_ph<9
+then 
+=>Publish tele/%topic%/PH {"pH":%m_ph%}
+endif
+if m_temp>1 
+and m_temp<40
+then 
+=>Publish tele/%topic%/TEMP {"Temp":%m_temp%}
+endif
+endif
